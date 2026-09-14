@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CO-Visit · Terminplan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#EEF1EF;
+    --surface:#FFFFFF;
+    --ink:#1E2A28;
+    --muted:#647471;
+    --field:#2F6F5E;
+    --field-bg:#E6EFEC;
+    --lunch:#A85A22;
+    --lunch-bg:#F3E9E0;
+    --line:#DCE2DF;
+    --full:#B7BFBC;
+    --danger:#B4432E;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:1180px;
+    margin:0 auto;
+    padding:28px 20px 60px;
+  }
+  header{
+    margin-bottom:22px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    letter-spacing:0.02em;
+    color:var(--muted);
+    margin:0 0 6px;
+  }
+  h1{
+    font-size:26px;
+    font-weight:600;
+    margin:0 0 8px;
+    letter-spacing:-0.01em;
+  }
+  .sub{
+    font-size:14.5px;
+    color:var(--muted);
+    max-width:640px;
+    line-height:1.5;
+    margin:0;
+  }
+  .legend{
+    display:flex;
+    gap:18px;
+    margin-top:16px;
+    font-size:13px;
+    color:var(--muted);
+  }
+  .legend span{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+  }
+  .dot{
+    width:9px;height:9px;border-radius:2px;display:inline-block;
+  }
+
+  .board{
+    display:flex;
+    gap:14px;
+    overflow-x:auto;
+    padding-bottom:10px;
+    scroll-snap-type:x proximity;
+  }
+  .day{
+    flex:0 0 232px;
+    scroll-snap-align:start;
+  }
+  .day-head{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    font-weight:600;
+    padding:10px 12px;
+    border-bottom:2px solid var(--ink);
+    margin-bottom:10px;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+  }
+
+  .slot{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-left:3px solid var(--field);
+    padding:12px 12px 10px;
+    margin-bottom:10px;
+  }
+  .slot.lunch{ border-left-color:var(--lunch); }
+  .slot.full{ opacity:0.85; }
+
+  .slot-time{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    font-weight:600;
+  }
+  .slot-type{
+    font-size:11.5px;
+    color:var(--field);
+    font-weight:600;
+    margin-bottom:6px;
+  }
+  .slot.lunch .slot-type{ color:var(--lunch); }
+
+  .cap-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin:4px 0 8px;
+    font-size:11.5px;
+    color:var(--muted);
+  }
+  .cap-dots{ display:flex; gap:3px; }
+  .cap-dots i{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--line);
+    display:inline-block;
+  }
+  .cap-dots i.filled{ background:var(--field); }
+  .slot.lunch .cap-dots i.filled{ background:var(--lunch); }
+
+  .names{
+    list-style:none;
+    margin:0 0 8px;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+  }
+  .names li{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--field-bg);
+    padding:5px 8px;
+    font-size:13px;
+  }
+  .slot.lunch .names li{ background:var(--lunch-bg); }
+  .names li button{
+    border:none;
+    background:none;
+    color:var(--muted);
+    cursor:pointer;
+    font-size:14px;
+    line-height:1;
+    padding:0 0 0 8px;
+  }
+  .names li button:hover{ color:var(--danger); }
+
+  .full-tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--full);
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+  }
+
+  .add-row{
+    display:flex;
+    gap:6px;
+  }
+  .add-row input{
+    flex:1;
+    min-width:0;
+    border:1px solid var(--line);
+    padding:6px 8px;
+    font-size:13px;
+    font-family:inherit;
+    background:var(--bg);
+  }
+  .add-row input:focus{
+    outline:none;
+    border-color:var(--field);
+  }
+  .slot.lunch .add-row input:focus{ border-color:var(--lunch); }
+  .add-row button{
+    border:none;
+    background:var(--ink);
+    color:#fff;
+    padding:6px 12px;
+    font-size:13px;
+    font-family:inherit;
+    cursor:pointer;
+  }
+  .add-row button:disabled{
+    background:var(--full);
+    cursor:not-allowed;
+  }
+
+  .footer-note{
+    margin-top:18px;
+    font-size:12.5px;
+    color:var(--muted);
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .refresh-btn{
+    border:1px solid var(--line);
+    background:var(--surface);
+    color:var(--ink);
+    font-size:12px;
+    font-family:'IBM Plex Mono', monospace;
+    padding:5px 10px;
+    cursor:pointer;
+  }
+  .refresh-btn:hover{ border-color:var(--ink); }
+
+  @media (prefers-reduced-motion: no-preference){
+    .names li{ animation: appear .25s ease; }
+    @keyframes appear{ from{ opacity:0; transform:translateY(-3px);} to{opacity:1; transform:none;} }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">SIGN UP SCHEDULE · SEP 30–OCT 4, 2026</p>
+    <h1>CO-Visit Bali English South</h1>
+    <p class="sub">Add your name to an open slot. Field Service slots hold up to 3 people, the Lunch Invitation holds 1. The schedule itself can't be changed here — only sign-ups.</p>
+    <div class="legend">
+      <span><i class="dot" style="background:#2F6F5E"></i>Field Service</span>
+      <span><i class="dot" style="background:#A85A22"></i>Lunch Invitation</span>
+    </div>
+  </header>
+
+  <div class="board" id="board"></div>
+
+  <div class="footer-note">
+    <button class="refresh-btn" id="refreshBtn">↻ Refresh</button>
+    <span id="statusText">Loading …</span>
+  </div>
+</div>
+
+<script>
+const DAYS = [
+  { date:'2026-09-30', slots:[
+    { id:'d1s1', time:'09:00', type:'field', label:'Field Service', max:3 },
+    { id:'d1s2', time:'12:00', type:'lunch', label:'Lunch Invitation', max:1 },
+    { id:'d1s3', time:'16:00', type:'field', label:'Field Service', max:3 },
+  ]},
+  { date:'2026-10-01', slots:[
+    { id:'d2s1', time:'09:00', type:'field', label:'Field Service', max:3 },
+    { id:'d2s2', time:'12:00', type:'lunch', label:'Lunch Invitation', max:1 },
+  ]},
+  { date:'2026-10-02', slots:[
+    { id:'d3s1', time:'09:00', type:'field', label:'Field Service', max:3 },
+    { id:'d3s2', time:'12:00', type:'lunch', label:'Lunch Invitation', max:1 },
+    { id:'d3s3', time:'16:00', type:'field', label:'Field Service', max:3 },
+  ]},
+  { date:'2026-10-03', slots:[
+    { id:'d4s1', time:'09:00', type:'field', label:'Field Service', max:3 },
+    { id:'d4s2', time:'12:00', type:'lunch', label:'Lunch Invitation', max:1 },
+  ]},
+  { date:'2026-10-04', slots:[
+    { id:'d5s1', time:'09:00', type:'field', label:'Field Service', max:3 },
+    { id:'d5s2', time:'12:00', type:'lunch', label:'Lunch Invitation', max:1 },
+  ]},
+];
+
+const board = document.getElementById('board');
+const statusText = document.getElementById('statusText');
+let cache = {};
+
+function fmtDay(iso){
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { weekday:'short', day:'2-digit', month:'short' }).toUpperCase();
+}
+
+const DB_URL = 'https://co-visit-schedule-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+async function loadSlot(id){
+  try{
+    const res = await fetch(`${DB_URL}/slots/${id}.json`);
+    const data = await res.json();
+    return Array.isArray(data) ? data.filter(n => n !== null) : [];
+  }catch(e){
+    return [];
+  }
+}
+
+async function saveSlot(id, names){
+  await fetch(`${DB_URL}/slots/${id}.json`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(names)
+  });
+}
+
+function render(){
+  board.innerHTML = '';
+  DAYS.forEach(day => {
+    const col = document.createElement('div');
+    col.className = 'day';
+    col.innerHTML = `<div class="day-head">${fmtDay(day.date)}</div>`;
+
+    day.slots.forEach(slot => {
+      const names = cache[slot.id] || [];
+      const isFull = names.length >= slot.max;
+
+      const el = document.createElement('div');
+      el.className = 'slot ' + slot.type + (isFull ? ' full' : '');
+
+      let dots = '';
+      for(let i=0;i<slot.max;i++){
+        dots += `<i class="${i < names.length ? 'filled' : ''}"></i>`;
+      }
+
+      let namesHtml = names.map(n => `
+        <li>
+          <span>${escapeHtml(n)}</span>
+          <button data-remove="${slot.id}" data-name="${escapeHtml(n)}" title="Remove entry">×</button>
+        </li>`).join('');
+
+      el.innerHTML = `
+        <div class="slot-time">${slot.time}</div>
+        <div class="slot-type">${slot.label}</div>
+        <div class="cap-row"><div class="cap-dots">${dots}</div>${names.length}/${slot.max} taken</div>
+        <ul class="names">${namesHtml}</ul>
+        ${isFull
+          ? `<div class="full-tag">Full</div>`
+          : `<div class="add-row">
+               <input type="text" maxlength="40" placeholder="Your name" data-input="${slot.id}">
+               <button data-submit="${slot.id}">Sign up</button>
+             </div>`
+        }
+      `;
+      col.appendChild(el);
+    });
+
+    board.appendChild(col);
+  });
+
+  // wire up handlers
+  board.querySelectorAll('[data-submit]').forEach(btn => {
+    btn.addEventListener('click', () => handleSubmit(btn.dataset.submit));
+  });
+  board.querySelectorAll('[data-input]').forEach(input => {
+    input.addEventListener('keydown', e => {
+      if(e.key === 'Enter') handleSubmit(input.dataset.input);
+    });
+  });
+  board.querySelectorAll('[data-remove]').forEach(btn => {
+    btn.addEventListener('click', () => handleRemove(btn.dataset.remove, btn.dataset.name));
+  });
+}
+
+function escapeHtml(str){
+  return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function findSlotMeta(id){
+  for(const day of DAYS){
+    const s = day.slots.find(s => s.id === id);
+    if(s) return s;
+  }
+  return null;
+}
+
+async function handleSubmit(slotId){
+  const input = board.querySelector(`[data-input="${slotId}"]`);
+  const name = (input.value || '').trim();
+  if(!name){ input.focus(); return; }
+
+  const meta = findSlotMeta(slotId);
+  statusText.textContent = 'Saving …';
+
+  const current = await loadSlot(slotId);
+  if(current.some(n => n.toLowerCase() === name.toLowerCase())){
+    statusText.textContent = 'You\'re already on this list.';
+    return;
+  }
+  if(current.length >= meta.max){
+    cache[slotId] = current;
+    render();
+    statusText.textContent = 'This slot was just filled by someone else.';
+    return;
+  }
+  current.push(name);
+  await saveSlot(slotId, current);
+  cache[slotId] = current;
+  render();
+  statusText.textContent = 'Signed up.';
+}
+
+async function handleRemove(slotId, name){
+  if(!confirm(`Remove entry for "${name}"?`)) return;
+  const current = await loadSlot(slotId);
+  const updated = current.filter(n => n !== name);
+  await saveSlot(slotId, updated);
+  cache[slotId] = updated;
+  render();
+  statusText.textContent = 'Entry removed.';
+}
+
+async function refreshAll(silent){
+  if(!silent) statusText.textContent = 'Refreshing …';
+  const allIds = DAYS.flatMap(d => d.slots.map(s => s.id));
+  const results = await Promise.all(allIds.map(id => loadSlot(id)));
+  allIds.forEach((id, i) => cache[id] = results[i]);
+  render();
+  const now = new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+  statusText.textContent = 'Last updated at ' + now;
+}
+
+document.getElementById('refreshBtn').addEventListener('click', () => refreshAll(false));
+
+refreshAll(false);
+setInterval(() => refreshAll(true), 6000);
+</script>
+</body>
+</html>
