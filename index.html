@@ -275,6 +275,7 @@ const DAYS = [
 const board = document.getElementById('board');
 const statusText = document.getElementById('statusText');
 let cache = {};
+let typingSlotId = null;
 
 function fmtDay(iso){
   const d = new Date(iso + 'T00:00:00');
@@ -350,6 +351,8 @@ function render(){
     btn.addEventListener('click', () => handleSubmit(btn.dataset.submit));
   });
   board.querySelectorAll('[data-input]').forEach(input => {
+    input.addEventListener('focus', () => { typingSlotId = input.dataset.input; });
+    input.addEventListener('blur', () => { if(typingSlotId === input.dataset.input) typingSlotId = null; });
     input.addEventListener('keydown', e => {
       if(e.key === 'Enter') handleSubmit(input.dataset.input);
     });
@@ -386,6 +389,7 @@ async function handleSubmit(slotId){
   }
   if(current.length >= meta.max){
     cache[slotId] = current;
+    typingSlotId = null;
     render();
     statusText.textContent = 'This slot was just filled by someone else.';
     return;
@@ -393,6 +397,7 @@ async function handleSubmit(slotId){
   current.push(name);
   await saveSlot(slotId, current);
   cache[slotId] = current;
+  typingSlotId = null;
   render();
   statusText.textContent = 'Signed up.';
 }
@@ -412,6 +417,13 @@ async function refreshAll(silent){
   const allIds = DAYS.flatMap(d => d.slots.map(s => s.id));
   const results = await Promise.all(allIds.map(id => loadSlot(id)));
   allIds.forEach((id, i) => cache[id] = results[i]);
+
+  if(typingSlotId && silent){
+    // Someone is actively typing — skip the redraw so their input isn't wiped.
+    // The fresh data is already cached and will show on the next render.
+    return;
+  }
+
   render();
   const now = new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
   statusText.textContent = 'Last updated at ' + now;
